@@ -379,6 +379,45 @@
       }
     });
 
+    // Petición de conversión robusta: maneja respuestas que NO son JSON y el
+    // "cold start" del plan gratuito de Render (reintenta una vez si el servidor
+    // está despertando o el despliegue aún no respondía con 404/502/503/504).
+    async function postConvert(endpoint, options, attempt = 1) {
+      let res;
+      try {
+        res = await fetch(endpoint, options);
+      } catch {
+        if (attempt === 1) {
+          stopScrambleProgress();
+          processingTextEl.textContent = 'El servidor gratuito está despertando (~50 s)…';
+          await new Promise(r => setTimeout(r, 5000));
+          return postConvert(endpoint, options, attempt + 1);
+        }
+        throw new Error('No se pudo contactar con el servidor. Reinténtalo en unos segundos.');
+      }
+
+      if (res.ok) return res.json();
+
+      if ([404, 502, 503, 504].includes(res.status) && attempt === 1) {
+        stopScrambleProgress();
+        processingTextEl.textContent = 'El servidor gratuito está despertando (~50 s)…';
+        await new Promise(r => setTimeout(r, 6000));
+        return postConvert(endpoint, options, attempt + 1);
+      }
+
+      // Mensaje útil sin asumir que el cuerpo es JSON (esto evita "Unexpected token N")
+      const text = await res.text().catch(() => '');
+      let msg = '';
+      try { const j = JSON.parse(text); msg = j.error || j.details || ''; } catch { /* no era JSON */ }
+      if (!msg) {
+        if (res.status === 404) msg = 'El servidor no está listo (desplegándose o dormido). Reinténtalo en un minuto.';
+        else if ([502, 503, 504].includes(res.status)) msg = `El servidor no respondió (${res.status}). Suele ser el arranque en frío del plan gratuito: reinténtalo.`;
+        else if (res.status === 413) msg = 'El archivo es demasiado grande para el servidor.';
+        else msg = `Error ${res.status}: ${(text || res.statusText || 'sin detalle').slice(0, 140)}`;
+      }
+      throw new Error(msg);
+    }
+
     // File upload handler
     function handleFile(file) {
       const formData = new FormData();
@@ -387,34 +426,21 @@
       showScreen(processingScreen);
       startScrambleProgress();
 
-      fetch('/api/convert', {
-        method: 'POST',
-        body: formData
-      })
-      .then(res => {
-        stopScrambleProgress();
-        if (!res.ok) {
-          return res.json().then(err => { throw new Error(err.error || err.details || 'Error desconocido') });
-        }
-        return res.json();
-      })
-      .then(data => {
-        currentMarkdown = data.markdown;
-        
-        // Generate name based on file original name
-        const base = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-        currentFilename = `${base}.md`;
-        
-        markdownOutput.value = currentMarkdown;
-        
-        showScreen(resultScreen);
-        filenameScrambler.setText(currentFilename);
-      })
-      .catch(err => {
-        stopScrambleProgress();
-        errorMessage.textContent = err.message;
-        showScreen(errorScreen);
-      });
+      postConvert('/api/convert', { method: 'POST', body: formData })
+        .then(data => {
+          stopScrambleProgress();
+          currentMarkdown = data.markdown;
+          const base = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+          currentFilename = `${base}.md`;
+          markdownOutput.value = currentMarkdown;
+          showScreen(resultScreen);
+          filenameScrambler.setText(currentFilename);
+        })
+        .catch(err => {
+          stopScrambleProgress();
+          errorMessage.textContent = err.message;
+          showScreen(errorScreen);
+        });
     }
 
     // URL conversion handler
@@ -422,21 +448,13 @@
       showScreen(processingScreen);
       startScrambleProgress();
 
-      fetch('/api/convert-url', {
+      postConvert('/api/convert-url', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: url })
       })
-      .then(res => {
-        stopScrambleProgress();
-        if (!res.ok) {
-          return res.json().then(err => { throw new Error(err.error || err.details || 'Error desconocido') });
-        }
-        return res.json();
-      })
       .then(data => {
+        stopScrambleProgress();
         currentMarkdown = data.markdown;
         
         // Generate custom name based on url hostname
