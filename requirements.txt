@@ -1,0 +1,2 @@
+# Conversor a Markdown. [all] incluye soporte de Office, PDF, audio/vídeo, etc.
+markitdown[all]

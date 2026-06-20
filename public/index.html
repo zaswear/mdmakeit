@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MDMakeIt · Convertidor a Markdown</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+            mono: ['Space Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0b0f19;
+      background-image: radial-gradient(circle at 50% -20%, #1e1b4b 0%, transparent 60%);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="text-slate-200 min-h-screen flex flex-col font-sans">
+
+  <!-- Header -->
+  <header className="border-b border-slate-800/80 bg-slate-950/20 backdrop-blur-md sticky top-0 z-40 py-4 px-6 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto w-full flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/35">
+          <span class="text-xl font-bold text-white">M</span>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
+            MDMakeIt
+            <span class="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-mono">LOCAL</span>
+          </h1>
+          <p class="text-xs text-slate-400">Conversor instantáneo de documentos a Markdown</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4 text-xs text-slate-400 font-mono">
+        <span>Powered by markitdown</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-4xl w-full mx-auto px-6 py-12 flex flex-col justify-center">
+    
+    <!-- Upload Screen -->
+    <div id="upload-screen" class="space-y-8">
+      <div class="text-center space-y-3">
+        <h2 class="text-3xl font-extrabold text-white tracking-tight sm:text-4xl">
+          Convierte a <span class="text-indigo-400">Markdown</span>
+        </h2>
+        <p class="text-slate-400 text-sm max-w-md mx-auto">
+          Extrae texto estructurado de tus archivos locales o transcribe enlaces de YouTube y páginas web.
+        </p>
+      </div>
+
+      <!-- Tab selector -->
+      <div class="flex border-b border-slate-800 max-w-xs mx-auto p-1 bg-slate-950/40 rounded-xl">
+        <button 
+          id="tab-file"
+          class="flex-1 text-center py-2 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition-all"
+        >
+          Archivo Local
+        </button>
+        <button 
+          id="tab-url"
+          class="flex-1 text-center py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all"
+        >
+          Enlace / URL
+        </button>
+      </div>
+
+      <!-- Drag and Drop Box (File Mode) -->
+      <div 
+        id="file-mode-container"
+        class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/10 hover:bg-indigo-950/5 rounded-2xl p-12 text-center cursor-pointer transition-all duration-300 group flex flex-col items-center justify-center min-h-[300px]"
+      >
+        <input type="file" id="file-input" class="hidden" accept=".pdf,.docx,.xlsx,.pptx,.html,.txt,.png,.jpg,.jpeg">
+        
+        <div class="w-16 h-16 bg-slate-900 border border-slate-800 group-hover:border-indigo-500/30 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-indigo-400 transition-all duration-300 mb-4 shadow-inner">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+          </svg>
+        </div>
+        
+        <p class="text-sm font-semibold text-slate-300">Arrastra tu archivo aquí o <span class="text-indigo-400 group-hover:underline">búscalo</span></p>
+        <p class="text-xs text-slate-500 mt-2">Formatos: PDF, DOCX, XLSX, PPTX, HTML, PNG, JPG, TXT</p>
+      </div>
+
+      <!-- URL Input Box (URL Mode) -->
+      <div 
+        id="url-mode-container"
+        class="hidden border border-slate-800 bg-slate-900/10 rounded-2xl p-12 text-center flex flex-col items-center justify-center min-h-[300px] space-y-6"
+      >
+        <div class="w-16 h-16 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center text-slate-400 shadow-inner">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+          </svg>
+        </div>
+        
+        <div class="w-full max-w-md space-y-3">
+          <p class="text-sm font-semibold text-slate-300">Ingresa la URL del recurso a convertir</p>
+          <div class="flex gap-2">
+            <input 
+              type="url" 
+              id="url-input" 
+              class="flex-1 px-4 py-2.5 text-sm bg-slate-950 border border-slate-800 rounded-lg focus:outline-none focus:border-indigo-500 text-slate-200"
+              placeholder="https://ejemplo.com o https://www.youtube.com/watch?v=..."
+            >
+            <button 
+              id="url-submit-btn"
+              class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 shadow-sm"
+            >
+              Convertir
+            </button>
+          </div>
+          <p class="text-xs text-slate-500">Soporta páginas web estándar y transcripción de videos de YouTube.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Processing Screen -->
+    <div id="processing-screen" class="hidden flex-col items-center justify-center py-20 space-y-4">
+      <div class="relative w-12 h-12">
+        <div class="w-12 h-12 rounded-full border-4 border-slate-800 border-t-indigo-500 animate-spin"></div>
+      </div>
+      <p id="processing-text" class="text-sm font-medium text-slate-300 font-mono">Convirtiendo con markitdown...</p>
+      <p class="text-xs text-slate-500">Esto puede tardar unos segundos según el tamaño del recurso.</p>
+    </div>
+
+    <!-- Error Screen -->
+    <div id="error-screen" class="hidden flex-col items-center justify-center py-12 text-center space-y-4 max-w-md mx-auto">
+      <div class="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+        ✕
+      </div>
+      <h3 class="font-bold text-lg text-white">Error de conversión</h3>
+      <p id="error-message" class="text-xs text-slate-400 leading-relaxed"></p>
+      <button 
+        onclick="resetApp()"
+        class="bg-slate-900 hover:bg-slate-800 text-slate-200 px-4 py-2 rounded-lg font-medium text-xs border border-slate-800 transition-colors"
+      >
+        Intentar de nuevo
+      </button>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="result-screen" class="hidden space-y-4 flex-1 flex flex-col h-[70vh]">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-indigo-400">📄</span>
+          <span id="output-filename" class="text-sm font-semibold text-white truncate max-w-xs">archivo.md</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button 
+            id="copy-btn"
+            class="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-800 hover:border-slate-700 text-xs font-semibold transition-all duration-200"
+          >
+            Copiar
+          </button>
+          <button 
+            id="download-btn"
+            class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 shadow-sm"
+          >
+            Descargar
+          </button>
+          <button 
+            onclick="resetApp()"
+            class="text-slate-500 hover:text-slate-300 p-1.5 rounded-lg transition-colors text-xs ml-2"
+          >
+            Convertir otro
+          </button>
+        </div>
+      </div>
+
+      <!-- Output Container -->
+      <div class="flex-1 bg-slate-950/80 border border-slate-900 rounded-xl overflow-hidden flex flex-col">
+        <textarea 
+          id="markdown-output" 
+          readonly 
+          class="w-full flex-1 p-6 bg-transparent text-slate-300 font-mono text-xs leading-relaxed focus:outline-none resize-none overflow-y-auto custom-scrollbar"
+        ></textarea>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Script logic -->
+  <script>
+    const dropZone = document.getElementById('file-mode-container');
+    const fileInput = document.getElementById('file-input');
+    const urlInput = document.getElementById('url-input');
+    const urlSubmitBtn = document.getElementById('url-submit-btn');
+    
+    const uploadScreen = document.getElementById('upload-screen');
+    const processingScreen = document.getElementById('processing-screen');
+    const resultScreen = document.getElementById('result-screen');
+    const errorScreen = document.getElementById('error-screen');
+    
+    const fileModeContainer = document.getElementById('file-mode-container');
+    const urlModeContainer = document.getElementById('url-mode-container');
+    const tabFile = document.getElementById('tab-file');
+    const tabUrl = document.getElementById('tab-url');
+    
+    const outputFilename = document.getElementById('output-filename');
+    const markdownOutput = document.getElementById('markdown-output');
+    const errorMessage = document.getElementById('error-message');
+    
+    const copyBtn = document.getElementById('copy-btn');
+    const downloadBtn = document.getElementById('download-btn');
+
+    class TextScramble {
+      constructor(el) {
+        this.el = el;
+        this.chars = '!<>-_\\/[]{}—=+*^?#________';
+        this.update = this.update.bind(this);
+      }
+      setText(newText) {
+        const oldText = this.el.innerText || '';
+        const length = Math.max(oldText.length, newText.length);
+        const promise = new Promise((resolve) => this.resolve = resolve);
+        this.queue = [];
+        for (let i = 0; i < length; i++) {
+          const from = oldText[i] || '';
+          const to = newText[i] || '';
+          const start = Math.floor(Math.random() * 20);
+          const end = start + Math.floor(Math.random() * 20);
+          this.queue.push({ from, to, start, end, char: '' });
+        }
+        cancelAnimationFrame(this.frameRequest);
+        this.frame = 0;
+        this.update();
+        return promise;
+      }
+      update() {
+        let output = '';
+        let complete = 0;
+        for (let i = 0, n = this.queue.length; i < n; i++) {
+          let { from, to, start, end, char } = this.queue[i];
+          if (this.frame >= end) {
+            complete++;
+            output += to;
+          } else if (this.frame >= start) {
+            if (!char || Math.random() < 0.28) {
+              char = this.randomChar();
+              this.queue[i].char = char;
+            }
+            output += `<span class="text-indigo-400 font-mono">${char}</span>`;
+          } else {
+            output += from;
+          }
+        }
+        this.el.innerHTML = output;
+        if (complete === this.queue.length) {
+          this.resolve();
+        } else {
+          this.frameRequest = requestAnimationFrame(this.update);
+          this.frame++;
+        }
+      }
+      randomChar() {
+        return this.chars[Math.floor(Math.random() * this.chars.length)];
+      }
+    }
+
+    const processingTextEl = document.getElementById('processing-text');
+    const processingScrambler = new TextScramble(processingTextEl);
+    const filenameScrambler = new TextScramble(outputFilename);
+    let scrambleInterval = null;
+    const phrases = [
+      'Iniciando markitdown...',
+      'Analizando formato del archivo...',
+      'Extrayendo texto estructurado...',
+      'Dando formato a tablas y enlaces...',
+      'Generando archivo Markdown...',
+      'Casi listo...'
+    ];
+
+    function startScrambleProgress() {
+      let phraseIdx = 0;
+      processingScrambler.setText(phrases[phraseIdx]);
+      scrambleInterval = setInterval(() => {
+        phraseIdx = (phraseIdx + 1) % phrases.length;
+        processingScrambler.setText(phrases[phraseIdx]);
+      }, 2500);
+    }
+
+    function stopScrambleProgress() {
+      if (scrambleInterval) {
+        clearInterval(scrambleInterval);
+        scrambleInterval = null;
+      }
+    }
+
+    let currentMarkdown = '';
+    let currentFilename = 'documento.md';
+
+    // Tabs switching logic
+    tabFile.addEventListener('click', () => {
+      tabFile.classList.add('bg-indigo-600', 'text-white');
+      tabFile.classList.remove('text-slate-400', 'hover:text-slate-200');
+      tabUrl.classList.remove('bg-indigo-600', 'text-white');
+      tabUrl.classList.add('text-slate-400', 'hover:text-slate-200');
+      fileModeContainer.classList.remove('hidden');
+      urlModeContainer.classList.add('hidden');
+    });
+
+    tabUrl.addEventListener('click', () => {
+      tabUrl.classList.add('bg-indigo-600', 'text-white');
+      tabUrl.classList.remove('text-slate-400', 'hover:text-slate-200');
+      tabFile.classList.remove('bg-indigo-600', 'text-white');
+      tabFile.classList.add('text-slate-400', 'hover:text-slate-200');
+      urlModeContainer.classList.remove('hidden');
+      fileModeContainer.classList.add('hidden');
+    });
+
+    // Drag and drop events
+    dropZone.addEventListener('click', () => fileInput.click());
+    
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('border-indigo-500', 'bg-indigo-950/5');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('border-indigo-500', 'bg-indigo-950/5');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-indigo-500', 'bg-indigo-950/5');
+      if (e.dataTransfer.files.length) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    urlSubmitBtn.addEventListener('click', () => {
+      const url = urlInput.value.trim();
+      if (!url) {
+        alert('Por favor introduce una URL válida.');
+        return;
+      }
+      handleUrl(url);
+    });
+
+    urlInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        const url = urlInput.value.trim();
+        if (url) handleUrl(url);
+      }
+    });
+
+    // File upload handler
+    function handleFile(file) {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      showScreen(processingScreen);
+      startScrambleProgress();
+
+      fetch('/api/convert', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => {
+        stopScrambleProgress();
+        if (!res.ok) {
+          return res.json().then(err => { throw new Error(err.error || err.details || 'Error desconocido') });
+        }
+        return res.json();
+      })
+      .then(data => {
+        currentMarkdown = data.markdown;
+        
+        // Generate name based on file original name
+        const base = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        currentFilename = `${base}.md`;
+        
+        markdownOutput.value = currentMarkdown;
+        
+        showScreen(resultScreen);
+        filenameScrambler.setText(currentFilename);
+      })
+      .catch(err => {
+        stopScrambleProgress();
+        errorMessage.textContent = err.message;
+        showScreen(errorScreen);
+      });
+    }
+
+    // URL conversion handler
+    function handleUrl(url) {
+      showScreen(processingScreen);
+      startScrambleProgress();
+
+      fetch('/api/convert-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url: url })
+      })
+      .then(res => {
+        stopScrambleProgress();
+        if (!res.ok) {
+          return res.json().then(err => { throw new Error(err.error || err.details || 'Error desconocido') });
+        }
+        return res.json();
+      })
+      .then(data => {
+        currentMarkdown = data.markdown;
+        
+        // Generate custom name based on url hostname
+        try {
+          const parsed = new URL(url);
+          currentFilename = `${parsed.hostname.replace('www.', '')}.md`;
+        } catch {
+          currentFilename = 'enlace.md';
+        }
+        
+        markdownOutput.value = currentMarkdown;
+        
+        showScreen(resultScreen);
+        filenameScrambler.setText(currentFilename);
+      })
+      .catch(err => {
+        stopScrambleProgress();
+        errorMessage.textContent = err.message;
+        showScreen(errorScreen);
+      });
+    }
+
+    // Screen visibility toggle
+    function showScreen(screen) {
+      [uploadScreen, processingScreen, resultScreen, errorScreen].forEach(s => s.classList.add('hidden'));
+      screen.classList.remove('hidden');
+      if (screen === errorScreen) screen.classList.add('flex');
+      if (screen === processingScreen) screen.classList.add('flex');
+    }
+
+    // Reset app states
+    function resetApp() {
+      fileInput.value = '';
+      urlInput.value = '';
+      currentMarkdown = '';
+      markdownOutput.value = '';
+      showScreen(uploadScreen);
+    }
+
+    // Copy to clipboard
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(currentMarkdown)
+        .then(() => {
+          copyBtn.textContent = '¡Copiado!';
+          copyBtn.classList.add('text-indigo-400', 'border-indigo-500/20');
+          setTimeout(() => {
+            copyBtn.textContent = 'Copiar';
+            copyBtn.classList.remove('text-indigo-400', 'border-indigo-500/20');
+          }, 2000);
+        })
+        .catch(err => alert('Error al copiar al portapapeles.'));
+    });
+
+    // Download MD file
+    downloadBtn.addEventListener('click', () => {
+      const blob = new Blob([currentMarkdown], { type: 'text/markdown;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', currentFilename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>
