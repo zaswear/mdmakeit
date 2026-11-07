@@ -34,7 +34,8 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage: storage });
+// Tope de tamaño: sin `limits`, multer escribe a disco lo que le manden.
+const upload = multer({ storage: storage, limits: { fileSize: 50 * 1024 * 1024, files: 1 } });
 
 // Configurable por entorno: en local tu venv; en Docker/Render → /opt/venv/bin/python
 const pythonPath = process.env.PYTHON_PATH || 'python3';
